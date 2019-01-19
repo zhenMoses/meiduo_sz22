@@ -43,6 +43,6 @@ class SMSCodeView(APIView):
         pl.execute()
 
         # 5.利用容联云通讯发短信
-        CCP().send_template_sms(mobile, [sms_code, constants.SMS_CODE_REDIS_EXPIRES // 60], 1)
+        # CCP().send_template_sms(mobile, [sms_code, constants.SMS_CODE_REDIS_EXPIRES // 60], 1)
         # 6.响应
         return Response({'message': 'ok'})
