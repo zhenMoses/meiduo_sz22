@@ -20,6 +20,7 @@ var vm = new Vue({
         sms_code_tip: '获取短信验证码',  // 获取短信验证码将来变成倒计时
         error_sms_code_message: '',  // 短信错误提示信息
         error_name_message: '',
+        error_phone_message: '',
     },
     methods: {
 // 检查用户名
@@ -64,12 +65,30 @@ var vm = new Vue({
                 this.error_check_password = false;
             }
         },
+        // 检查手机号
         check_phone: function () {
-            var re = /^1[345789]\d{9}$/;
+            var re = /^1[3-9]\d{9}$/;
             if (re.test(this.mobile)) {
                 this.error_phone = false;
             } else {
+                this.error_phone_message = '您输入的手机号格式不正确';
                 this.error_phone = true;
+            }
+            if (this.error_phone == false) {
+                axios.get(this.host + '/mobiles/' + this.mobile + '/count/', {
+                    responseType: 'json'
+                })
+                    .then(response => {
+                        if (response.data.count > 0) {
+                            this.error_phone_message = '手机号已存在';
+                            this.error_phone = true;
+                        } else {
+                            this.error_phone = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.log(error.response.data);
+                    })
             }
         },
         check_sms_code: function () {
