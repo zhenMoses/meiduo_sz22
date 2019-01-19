@@ -6,6 +6,7 @@ from meiduo.libs.yuntongxun.sms import CCP
 from rest_framework.response import Response
 import logging
 from rest_framework import status
+from . import constants
 
 logger = logging.getLogger('django')  # 创建日志输出器
 
@@ -16,7 +17,6 @@ class SMSCodeView(APIView):
     """发送短信验证码"""
 
     def get(self, request, mobile):
-
         # 0.创建redis连接对象
         redis_conn = get_redis_connection('verify_codes')
         # 1.获取此手机号是否有发送过的标记
@@ -25,18 +25,17 @@ class SMSCodeView(APIView):
         if flag:  # 如果if成立说明此手机号60秒内发过短信
             return Response({'message': '频繁发送短信'}, status=status.HTTP_400_BAD_REQUEST)
 
-
         # 3.生成短信验证码
         sms_code = '%06d' % randint(0, 999999)
         logger.info(sms_code)
 
         # 4.把验证码存储到redis中
         # redis_conn.setex(key, 过期时间, value)
-        redis_conn.setex('sms_%s' % mobile, 300, sms_code)
+        redis_conn.setex('sms_%s' % mobile, constants.SMS_CODE_REDIS_EXPIRES, sms_code)
         # 4.1 存储此手机号已发送短信标记
-        redis_conn.setex('send_flag_%s' % mobile, 60, 1)
+        redis_conn.setex('send_flag_%s' % mobile, constants.SEND_SMS_CODE_INTERVAL, 1)
 
         # 5.利用容联云通讯发短信
-        CCP().send_template_sms(mobile, [sms_code, 5], 1)
+        CCP().send_template_sms(mobile, [sms_code, constants.SMS_CODE_REDIS_EXPIRES // 60], 1)
         # 6.响应
         return Response({'message': 'ok'})
