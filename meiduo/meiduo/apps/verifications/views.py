@@ -8,6 +8,8 @@ import logging
 from rest_framework import status
 from . import constants
 
+from celery_tasks.sms.tasks import send_sms_code
+
 logger = logging.getLogger('django')  # 创建日志输出器
 
 
@@ -44,5 +46,8 @@ class SMSCodeView(APIView):
 
         # 5.利用容联云通讯发短信
         # CCP().send_template_sms(mobile, [sms_code, constants.SMS_CODE_REDIS_EXPIRES // 60], 1)
+        # 触发异步任务(让发短信不要阻塞主线程)
+        # send_sms_code(mobile, sms_code)
+        send_sms_code.delay(mobile, sms_code)
         # 6.响应
         return Response({'message': 'ok'})

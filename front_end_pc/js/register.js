@@ -87,6 +87,7 @@ var vm = new Vue({
                 responseType: 'json'
             })
                 .then(response => {
+                    this.error_sms_code = false;
                     // 表示后端发送短信成功
                     // 倒计时60秒，60秒后允许用户再次点击发送短信验证码的按钮
                     var num = 60;
