@@ -7,6 +7,7 @@ from .serializers import UserSerializer
 from .models import User
 
 
+
 # Create your views here.
 
 # POST /users/
