@@ -40,7 +40,7 @@ var vm = new Vue({
                 } else {
                     // 用户未绑定
                     this.access_token = response.data.access_token;
-                    this.is_show_waiting = false;
+                    this.is_show_waiting = false; // 显示绑定界面
                 }
             })
             .catch(error => {

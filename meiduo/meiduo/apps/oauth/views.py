@@ -8,6 +8,7 @@ import logging
 from rest_framework_jwt.settings import api_settings
 
 from .models import QQAuthUser
+from .utils import generate_save_user_token
 
 
 logger = logging.getLogger('django')
@@ -41,8 +42,9 @@ class QQAuthUserView(APIView):
         except QQAuthUser.DoesNotExist:
             # 如果openid没有绑定过美多商城中的用户
             # 把openid进行加密安全处理,再响应给浏览器,让它先帮我们保存一会
+            openid_sin = generate_save_user_token(openid)
+            return Response({'access_token': openid_sin})
 
-            pass
         else:
             # 如果openid已经绑定过美多商城中的用户(生成jwt token直接让它登录成功)
             # 手动生成token
