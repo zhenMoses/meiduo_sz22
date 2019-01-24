@@ -1,12 +1,13 @@
 from django.shortcuts import render
 from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework_extensions.mixins import CacheResponseMixin
 
 from .models import Area
 from .serializers import AreaSerializer, SubsAreaSerializer
 
 
 # Create your views here.
-class AreasViewSet(ReadOnlyModelViewSet):
+class AreasViewSet(CacheResponseMixin, ReadOnlyModelViewSet):
     """省市区查询视图集"""
 
     # queryset = Area.objects.filter(parent_id=None)
