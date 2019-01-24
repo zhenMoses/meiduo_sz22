@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadData
 from django.conf import settings
 # Create your models here.
 
@@ -27,3 +27,24 @@ class User(AbstractUser):
 
         # 4. 拼接好verify_url并响应
         return 'http://www.meiduo.site:8080/success_verify_email.html?token=' + token
+
+    @staticmethod
+    def check_verify_email_token(token):
+        """token解密及查询user"""
+        # 1.创建加密的序列化器对象
+        serializer = Serializer(settings.SECRET_KEY, 24 * 60 * 60)
+        # 2. 调用loads方法对token解密
+        try:
+            data = serializer.loads(token)
+        except BadData:
+            return None
+        else:
+            # 3. 取出user_id和 email 然后用这两个字段查到唯一的那个用户
+            user_id = data.get('user_id')
+            email = data.get('email')
+            try:
+                user = User.objects.get(id=user_id, email=email)
+            except User.DoesNotExist:
+                return None
+            else:
+                return user
