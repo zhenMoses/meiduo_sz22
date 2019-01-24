@@ -3,23 +3,38 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import RetrieveAPIView
+from rest_framework.generics import RetrieveAPIView, UpdateAPIView
 
-from .serializers import UserSerializer, UserDetailSerializer
+from .serializers import UserSerializer, UserDetailSerializer, EmailSerializer
 from .models import User
 
 
 # Create your views here.
-# GET   /user/
-# class UserDetailView(APIView):
-#     """提供用户个人信息接口"""
-#     permission_classes = [IsAuthenticated]  # 指定权限,必须是通过认证的用户才能访问此接口(就是当前本网站的登录用户)
-#
-#     def get(self, request):
-#         user = request.user  # 获取本次请求的用户对象
-#         serializer = UserDetailSerializer(user)
-#         return Response(serializer.data)
+# PUT  /email/
+class EmailView(UpdateAPIView):
+    """保存邮箱"""
+    permission_classes = [IsAuthenticated]
+    # 指定序列化器
+    serializer_class = EmailSerializer
 
+    def get_object(self):
+        return self.request.user
+
+
+
+
+"""
+# GET   /user/
+class UserDetailView(APIView):
+    # 提供用户个人信息接口
+    # 指定权限,必须是通过认证的用户才能访问此接口(就是当前本网站的登录用户)
+    permission_classes = [IsAuthenticated] 
+
+    def get(self, request):
+        user = request.user  # 获取本次请求的用户对象
+        serializer = UserDetailSerializer(user)
+        return Response(serializer.data)
+"""
 
 class UserDetailView(RetrieveAPIView):
     """提供用户个人信息接口"""
