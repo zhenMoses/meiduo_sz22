@@ -26,8 +26,7 @@ class QQAuthUserView(APIView):
         # 1.1 创建qq登录工具对象
         oauthqq = OAuthQQ(client_id=settings.QQ_CLIENT_ID,
                           client_secret=settings.QQ_CLIENT_SECRET,
-                          redirect_uri=settings.QQ_REDIRECT_URI,
-                          state=next)
+                          redirect_uri=settings.QQ_REDIRECT_URI)
         try:
             # 2.通过code向QQ服务器请求获取access_token
             access_token = oauthqq.get_access_token(code)
