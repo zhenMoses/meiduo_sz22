@@ -5,12 +5,32 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import RetrieveAPIView, UpdateAPIView
+from rest_framework.viewsets import GenericViewSet
+from rest_framework.mixins import CreateModelMixin
 
 from .serializers import UserSerializer, UserDetailSerializer, EmailSerializer
 from .models import User
 
 
 # Create your views here.
+class AddressViewSet(GenericViewSet):
+    """用户收货地址"""
+    permission_classes = [IsAuthenticated]
+
+    # serializer_class = '序列化器'
+
+    def create(self, request):
+        """新增收货地址"""
+        # 判断用户的收货地址数量是否上限
+        # 创建序列化器给data参数传值(反序列化)
+        # 调用序列化器的is_valid方法
+        # 调用序列化器的save
+        # 响应
+
+
+
+
+
 class EmailVerifyView(APIView):
     """激活邮箱"""
     def get(self, request):
