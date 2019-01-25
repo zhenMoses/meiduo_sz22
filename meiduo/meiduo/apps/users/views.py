@@ -8,24 +8,33 @@ from rest_framework.generics import RetrieveAPIView, UpdateAPIView
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import CreateModelMixin
 
-from .serializers import UserSerializer, UserDetailSerializer, EmailSerializer
-from .models import User
+from .serializers import UserSerializer, UserDetailSerializer, EmailSerializer, UserAddressSerializer
+from .models import User, Address
 
 
 # Create your views here.
-class AddressViewSet(GenericViewSet):
+class AddressViewSet(CreateModelMixin, GenericViewSet):
     """用户收货地址"""
     permission_classes = [IsAuthenticated]
 
-    # serializer_class = '序列化器'
+    serializer_class = UserAddressSerializer
 
-    def create(self, request):
+    def create(self, request, *args, **kwargs):
         """新增收货地址"""
         # 判断用户的收货地址数量是否上限
-        # 创建序列化器给data参数传值(反序列化)
-        # 调用序列化器的is_valid方法
-        # 调用序列化器的save
-        # 响应
+        # address_count = Address.objects.filter(user=request.user).count()
+        address_count = request.user.addresses.count()
+        if address_count > 20:
+            return Response({'message': '收货地址数量上限'}, status=status.HTTP_400_BAD_REQUEST)
+        # # 创建序列化器给data参数传值(反序列化)
+        #         # serializer = UserAddressSerializer(data=request.data, context={'request': request})
+        #         # # 调用序列化器的is_valid方法
+        #         # serializer.is_valid(raise_exception=True)
+        #         # # 调用序列化器的save
+        #         # serializer.save()
+        #         # # 响应
+        #         # return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return super(AddressViewSet, self).create(request, *args, **kwargs)
 
 
 
