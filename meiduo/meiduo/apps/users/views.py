@@ -52,7 +52,7 @@ class AddressViewSet(UpdateModelMixin, CreateModelMixin, GenericViewSet):
             'user_id': user.id,
             'default_address_id': user.default_address_id,
             'limit': 20,
-            'addresses': serializer.data,
+            'addresses': serializer.data
         })
 
     def destroy(self, request, *args, **kwargs):
