@@ -10,6 +10,8 @@ from .serializers import AreaSerializer, SubsAreaSerializer
 class AreasViewSet(CacheResponseMixin, ReadOnlyModelViewSet):
     """省市区查询视图集"""
 
+    pagination_class = None  # 禁用分页
+
     # queryset = Area.objects.filter(parent_id=None)
     def get_queryset(self):
         if self.action == 'list':  # 如果是list行为表示要所有省的模型
