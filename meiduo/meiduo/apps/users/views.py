@@ -9,11 +9,24 @@ from rest_framework.generics import RetrieveAPIView, UpdateAPIView
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import CreateModelMixin, UpdateModelMixin
 
-from .serializers import UserSerializer, UserDetailSerializer, EmailSerializer, UserAddressSerializer, AddressTitleSerializer
+from .serializers import UserSerializer, UserDetailSerializer, EmailSerializer, UserAddressSerializer, \
+    AddressTitleSerializer, UserBrowseHistorySerializer
+
 from .models import User, Address
 
 
 # Create your views here.
+# POST  //browse_histories//
+class UserBrowseHistoryView(CreateAPIView):
+    """用户浏览记录"""
+
+    # 指定序列化器(校验)
+    serializer_class = UserBrowseHistorySerializer
+    # 指定权限
+    permission_classes = [IsAuthenticated]
+
+
+
 class AddressViewSet(UpdateModelMixin, CreateModelMixin, GenericViewSet):
     """用户收货地址"""
     permission_classes = [IsAuthenticated]
