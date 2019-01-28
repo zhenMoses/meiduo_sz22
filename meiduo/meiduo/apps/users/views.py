@@ -1,22 +1,26 @@
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import RetrieveAPIView, UpdateAPIView
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import CreateModelMixin, UpdateModelMixin
+from django_redis import get_redis_connection
 
 from .serializers import UserSerializer, UserDetailSerializer, EmailSerializer, UserAddressSerializer, \
     AddressTitleSerializer, UserBrowseHistorySerializer
 
 from .models import User, Address
+from goods.models import SKU
+from goods.serializers import SKUSerializer
+
 
 
 # Create your views here.
-# POST  //browse_histories//
+# POST/GET  /browse_histories/
 class UserBrowseHistoryView(CreateAPIView):
     """用户浏览记录"""
 
@@ -24,6 +28,27 @@ class UserBrowseHistoryView(CreateAPIView):
     serializer_class = UserBrowseHistorySerializer
     # 指定权限
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """读取用户浏览记录"""
+        # 创建redis连接对象
+        redis_conn = get_redis_connection('history')
+        # 查询出redis中当前登录用户的浏览记录[b'1', b'2', b'3']
+        sku_ids = redis_conn.lrange('history_%d' % request.user.id, 0, -1)
+
+        # 把sku_id对应的sku模型取出来
+        # skus = SKU.objects.filter(id__in=sku_ids)  # 此查询它会对数据进行排序处理
+        # 查询sku列表数据
+        sku_list = []
+        for sku_id in sku_ids:
+            sku = SKU.objects.get(id=sku_id)
+            sku_list.append(sku)
+
+        # 序列化器
+        serializer = SKUSerializer(sku_list, many=True)
+
+        return Response(serializer.data)
+
 
 
 
@@ -80,8 +105,6 @@ class AddressViewSet(UpdateModelMixin, CreateModelMixin, GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-
     # put /addresses/pk/status/
     @action(methods=['put'], detail=True)
     def status(self, request, pk=None):
@@ -107,10 +130,9 @@ class AddressViewSet(UpdateModelMixin, CreateModelMixin, GenericViewSet):
         return Response(serializer.data)
 
 
-
-
 class EmailVerifyView(APIView):
     """激活邮箱"""
+
     def get(self, request):
 
         # 1.获取前token查询参数
@@ -131,9 +153,6 @@ class EmailVerifyView(APIView):
         return Response({'message': 'ok'})
 
 
-
-
-
 # PUT  /email/
 class EmailView(UpdateAPIView):
     """保存邮箱"""
@@ -143,8 +162,6 @@ class EmailView(UpdateAPIView):
 
     def get_object(self):
         return self.request.user
-
-
 
 
 """
@@ -159,6 +176,7 @@ class UserDetailView(APIView):
         serializer = UserDetailSerializer(user)
         return Response(serializer.data)
 """
+
 
 class UserDetailView(RetrieveAPIView):
     """提供用户个人信息接口"""
