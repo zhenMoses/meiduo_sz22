@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 import pickle, base64
 from rest_framework.response import Response
 from rest_framework import status
+from django_redis import get_redis_connection
 
 from .serializers import CartSerializer
 
@@ -23,10 +24,25 @@ class CartView(APIView):
         sku_id = serializer.validated_data.get('sku_id')
         count = serializer.validated_data.get('count')
         selected = serializer.validated_data.get('selected')
-
+        # 创建响应对象
+        response = Response(serializer.data, status=status.HTTP_201_CREATED)
         try:
             user = request.user  # 获取登录用户  首次获取还会做认证
             # 如果代码能继续向下走说明是登录用户存储购物车数据到redis
+            """
+            cart_user_id: {sku_id_16: 1}   hash
+        
+            hincrby(cart_1, sku_id_16, 2)  # 如果sku_id,已存在,直接会做增量计算
+            
+            selected_user_id :{sku_id}  set
+            """
+            # 创建redis连接对象
+            redis_conn = get_redis_connection('cart')
+            pl = redis_conn.pipeline()
+            pl.hincrby('cart_%d' % user.id, sku_id, count)
+            if selected:  # 判断当前商品是否勾选, 把勾选的商品sku_id添加到set集合中
+                pl.sadd('selected_%d' % user.id, sku_id)
+            pl.execute()
 
         except:
             # 未登录存储到cookie
@@ -77,12 +93,11 @@ class CartView(APIView):
             cart_cookie_bytes = base64.b64encode(cart_ascii_bytes)
             cart_str = cart_cookie_bytes.decode()
 
-            # 创建响应对象
-            response = Response(serializer.data, status=status.HTTP_201_CREATED)
+
             response.set_cookie('carts', cart_str)
 
 
-            return response
+        return response
 
     def get(self, request):
         """查询购物车"""
