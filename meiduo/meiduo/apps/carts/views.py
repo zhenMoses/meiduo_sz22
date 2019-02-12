@@ -9,10 +9,19 @@ from rest_framework.views import APIView
 class CartView(APIView):
     """购物车视图"""
 
+    def perform_authentication(self, request):
+        """禁用认证/延后认证"""
+        pass
+
     def post(self, request):
         """添加购物车"""
+        try:
+            user = request.user  # 获取登录用户  首次获取还会做认证
+            # 如果代码能继续向下走说明是登录用户存储购物车数据到redis
 
-        pass
+        except:
+            # 未登录存储到cookie
+            pass
 
     def get(self, request):
         """查询购物车"""
