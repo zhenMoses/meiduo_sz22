@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django_redis import get_redis_connection
 
-from .serializers import CartSerializer, CartSKUSerializer
+from .serializers import CartSerializer, CartSKUSerializer, CartDeleteSerializer
 from goods.models import SKU
 
 
@@ -212,4 +212,28 @@ class CartView(APIView):
 
     def delete(self, request):
         """删除购物车"""
+        serializer = CartDeleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        sku_id = serializer.validated_data.get('sku_id')
+
+        try:
+            user = request.user
+        except:
+            user = None
+        else:
+            # 已登录用户操作redis购物车数据
+            # 创建redis连接对象
+            redis_conn = get_redis_connection('cart')
+            pl = redis_conn.pipeline()
+            # 把本次要删除的sku_id从hash字典中移除
+            pl.hdel('cart_%d' % user.id, sku_id)
+            # 把本次要删除的sku_id从set集合中移除
+            pl.srem('selected_%d' % user.id, sku_id)
+            pl.execute()
+
+        if not user:
+            # 未登录用户操作cookie购物车数据
+            pass
+
+
         pass
