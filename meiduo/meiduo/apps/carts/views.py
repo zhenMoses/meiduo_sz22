@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django_redis import get_redis_connection
 
-from .serializers import CartSerializer, CartSKUSerializer, CartDeleteSerializer
+from .serializers import CartSerializer, CartSKUSerializer, CartDeleteSerializer, CartSelectedSerializer
 from goods.models import SKU
 
 
@@ -132,10 +132,13 @@ class CartView(APIView):
             # 判断是否有cookie购物车数据
             if cart_str:
                 cart_dict = pickle.loads(base64.b64decode(cart_str.encode()))
+            else:
+                cart_dict = {}
 
 
 
         # 以下序列化的代码无论登录还是未登录都要执行,注意缩进问题
+
         # 获取购物车中所有商品的sku模型
         skus = SKU.objects.filter(id__in=cart_dict.keys())
 
@@ -252,6 +255,45 @@ class CartView(APIView):
                     response.delete_cookie('carts')  # 如果cookie购物车数据已经全部删除,就把cookie移除
 
         return response
+
+
+class CartSelectedView(APIView):
+    """购物车全选"""
+
+    # 延后认证
+    def perform_authentication(self, request):
+        pass
+
+    def put(self, request):
+
+        # 创建序列器进行反序列化
+        serializer = CartSelectedSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        selected = serializer.validated_data.get('selected')
+
+        try:
+            user = request.user
+        except:
+            user = None
+        else:
+            # 已登录用户操作redis
+            # 创建redis连接对象
+            redis_conn = get_redis_connection('cart')
+            # 获取redis中的hash字典
+            cart_redis_dict = redis_conn.hgetall('cart_%d' % user.id)
+            # 判断是全选还是取消全选
+            if selected:
+                # 如果是全选把所有sku_id添加到set集合中
+                redis_conn.sadd('selected_%d' % user.id, *cart_redis_dict.keys())
+            else:
+                # 如果取消全选把所有sku_id从set集合中移除
+                redis_conn.srem('selected_%d' % user.id, *cart_redis_dict.keys())
+
+        if not user:
+            # 未登录用户操作cookie
+
+
+            pass
 
 
 
