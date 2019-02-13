@@ -216,6 +216,7 @@ class CartView(APIView):
         serializer.is_valid(raise_exception=True)
         sku_id = serializer.validated_data.get('sku_id')
 
+        response = Response(status=status.HTTP_204_NO_CONTENT)
         try:
             user = request.user
         except:
@@ -233,7 +234,25 @@ class CartView(APIView):
 
         if not user:
             # 未登录用户操作cookie购物车数据
-            pass
+            # 获取cookie数据
+            cart_str = request.COOKIES.get('carts')
+            # 把cart_str 转换成cart_dict
+            if cart_str:
+                cart_dict = pickle.loads(base64.b64decode(cart_str.encode()))
+
+                # 把要删除的sku_id从cart_dict字典中移除
+                if sku_id in cart_dict:
+                    del cart_dict[sku_id]
+                if len(cart_dict.keys()): # if成立给cookie字典中还有商品
+                    # 把cart_dict 转换成 cart_str
+                    cart_str = base64.b64encode(pickle.dumps(cart_dict)).decode()
+                    # 设置cookie
+                    response.set_cookie('carts', cart_str)
+                else:
+                    response.delete_cookie('carts')  # 如果cookie购物车数据已经全部删除,就把cookie移除
+
+        return response
 
 
-        pass
+
+
