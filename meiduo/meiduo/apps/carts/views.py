@@ -24,8 +24,10 @@ class CartView(APIView):
         sku_id = serializer.validated_data.get('sku_id')
         count = serializer.validated_data.get('count')
         selected = serializer.validated_data.get('selected')
+
         # 创建响应对象
         response = Response(serializer.data, status=status.HTTP_201_CREATED)
+
         try:
             user = request.user  # 获取登录用户  首次获取还会做认证
             # 如果代码能继续向下走说明是登录用户存储购物车数据到redis
@@ -62,7 +64,6 @@ class CartView(APIView):
             # 获取cookie中的购物车数据
             cart_cookie = request.COOKIES.get('carts')
 
-
             # 判断是否有购物车数据
             if cart_cookie:
 
@@ -75,7 +76,6 @@ class CartView(APIView):
                 cart_dict = pickle.loads(cart_ascii_bytes)
             else:  # 之前没有cookie购物车数据
                 cart_dict = {}
-
 
             # 判断本次添加的商品是否在购物车中已存在,如果已存要做增量计算
             if sku_id in cart_dict:
@@ -93,15 +93,50 @@ class CartView(APIView):
             cart_cookie_bytes = base64.b64encode(cart_ascii_bytes)
             cart_str = cart_cookie_bytes.decode()
 
-
             response.set_cookie('carts', cart_str)
-
 
         return response
 
     def get(self, request):
         """查询购物车"""
-        pass
+        try:
+            user = request.user
+            # 如果获取到user说明是已登录用户(操作redis数据库)
+
+        except:
+            # 如果获取user出现异常说明当前是未登录用户(获取cookie购物车数据)
+            pass
+        else:
+
+            # 如果获取到user说明是已登录用户(操作redis数据库)
+            # 创建redis连接对象
+            redis_conn = get_redis_connection('cart')
+            # 获取hash数据 {sku_id16: 1, sku_id2: 2}
+            cart_redis_dict = redis_conn.hgetall('cart_%d' % user.id)
+            # 获取set数据
+            selected_ids = redis_conn.smembers('selected_%d' % user.id)
+            # 把redis的购物车数据转换成和cookie购物车数据格式一样
+
+            # 定义一个用来转换数据格式的大字典
+            cart_dict = {}
+            for sku_id_bytes in cart_redis_dict:
+                cart_dict[int(sku_id_bytes)] = {
+                    'count': int(cart_redis_dict[sku_id_bytes]),
+                    'selected': sku_id_bytes in selected_ids
+                }
+
+"""
+{
+    “sku_id_1”: {
+                “selected”:  True,
+                “count”: 1
+                },
+    “sku_id_2”: {
+                “selected”:  True,
+                “count": 1
+                }
+}
+"""
 
     def put(self, request):
         """修改购物车"""
