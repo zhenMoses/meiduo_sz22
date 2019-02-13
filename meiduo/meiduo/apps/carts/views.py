@@ -150,22 +150,65 @@ class CartView(APIView):
 
 
 
-"""
-{
-    “sku_id_1”: {
-                “selected”:  True,
-                “count”: 1
-                },
-    “sku_id_2”: {
-                “selected”:  True,
-                “count": 1
-                }
-}
-"""
+    """
+    {
+        “sku_id_1”: {
+                    “selected”:  True,
+                    “count”: 1
+                    },
+        “sku_id_2”: {
+                    “selected”:  True,
+                    “count": 1
+                    }
+    }
+    """
 
     def put(self, request):
         """修改购物车"""
-        pass
+        serializer = CartSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        sku_id = serializer.validated_data.get('sku_id')
+        count = serializer.validated_data.get('count')
+        selected = serializer.validated_data.get('selected')
+
+        response = Response(serializer.data)
+        try:
+            user = request.user
+        except:
+            user = None
+        else:
+            # 已登录用户操作redis购物车数据
+            redis_conn = get_redis_connection('cart')
+            pl = redis_conn.pipeline()
+            # 创建redis连接对象 hash 字典: {sku_id_16: 2, sku_id_2: 1}
+            # 勾选状态 set集合中 {sku_id_16, sku_id_2}
+            # 修改指定sku_id的购买数据 把hash字典中指定sku_id的value覆盖掉
+            pl.hset('cart_%d' % user.id, sku_id, count)
+            # 修改商品勾选状态
+            if selected:
+                pl.sadd('selected_%d' % user.id, sku_id)
+            else:
+                pl.srem('selected_%d' % user.id, sku_id)
+            pl.execute()
+
+        if not user:
+            # 未登录用户操作cookie购物车数据
+            cart_str = request.COOKIES.get('carts')
+            if cart_str:
+                cart_dict = pickle.loads(base64.b64decode(cart_str.encode()))
+
+                if sku_id in cart_dict:  # 判断当前要修改的sku_id在cookie字典中是否存在
+                    # 直接覆盖商品的数据及勾选状态
+                    cart_dict[sku_id] = {
+                        'count': count,
+                        'selected': selected
+                    }
+
+                cart_str = base64.b64encode(pickle.dumps(cart_dict)).decode()
+                response.set_cookie('carts', cart_str)
+
+        return response
+
 
     def delete(self, request):
         """删除购物车"""
