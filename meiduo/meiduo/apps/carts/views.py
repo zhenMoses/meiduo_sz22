@@ -105,7 +105,7 @@ class CartView(APIView):
 
         except:
             # 如果获取user出现异常说明当前是未登录用户(获取cookie购物车数据)
-            pass
+            user = None
         else:
 
             # 如果获取到user说明是已登录用户(操作redis数据库)
@@ -124,6 +124,16 @@ class CartView(APIView):
                     'count': int(cart_redis_dict[sku_id_bytes]),
                     'selected': sku_id_bytes in selected_ids
                 }
+
+        if not user:
+            # 如果没有获取到user说明当前是未登录用户操作(cookie购物车数据)
+            cart_str = request.COOKIES.get('carts')
+            # 判断是否有cookie购物车数据
+            if cart_str:
+                cart_dict = pickle.loads(base64.b64decode(cart_str.encode()))
+
+
+
 
 """
 {
