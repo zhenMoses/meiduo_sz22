@@ -57,11 +57,14 @@ class QQAuthUserView(APIView):
             token = jwt_encode_handler(payload)  # 根据载荷生成token
 
             # 做cookie购物车合并到redis操作
+
             return Response({
                 'token': token,
                 'username': user.username,
                 'user_id': user.id
             })
+
+
 
 
     def post(self, request):
