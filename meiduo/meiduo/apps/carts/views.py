@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django_redis import get_redis_connection
 
-from .serializers import CartSerializer
+from .serializers import CartSerializer, CartSKUSerializer
+from goods.models import SKU
 
 
 # Create your views here.
@@ -132,6 +133,20 @@ class CartView(APIView):
             if cart_str:
                 cart_dict = pickle.loads(base64.b64decode(cart_str.encode()))
 
+
+
+        # 以下序列化的代码无论登录还是未登录都要执行,注意缩进问题
+        # 获取购物车中所有商品的sku模型
+        skus = SKU.objects.filter(id__in=cart_dict.keys())
+
+        # 遍历skus查询集,给里面的每个sku模型追加两个属性
+        for sku in skus:
+            sku.count = cart_dict[sku.id]['count']
+            sku.selected = cart_dict[sku.id]['selected']
+
+        # 创建序列化器进行序列化操作
+        serializer = CartSKUSerializer(skus, many=True)
+        return Response(serializer.data)
 
 
 
