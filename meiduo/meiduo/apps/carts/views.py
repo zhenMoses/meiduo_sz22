@@ -271,6 +271,8 @@ class CartSelectedView(APIView):
         serializer.is_valid(raise_exception=True)
         selected = serializer.validated_data.get('selected')
 
+        response = Response(serializer.data)
+
         try:
             user = request.user
         except:
@@ -291,9 +293,28 @@ class CartSelectedView(APIView):
 
         if not user:
             # 未登录用户操作cookie
+            # 获取cookie数据
+            cart_str = request.COOKIES.get('carts')
+            # 把cart_str 转换成cart_dict
+            if cart_str:
+                cart_dict = pickle.loads(base64.b64decode(cart_str.encode()))
+                # for sku_id, sku_id_dict in cart_dict.items():
+                # 遍历cookie字典
+                for sku_id in cart_dict:
+                    # 取出每个sku_id对应的小字典
+                    sku_id_dict = cart_dict[sku_id]
+                    # 是全选把selected全部改为True否则改为False
+                    sku_id_dict['selected'] = selected
+
+                # 把cart_dict 转换成 cart_str
+                cart_str = base64.b64encode(pickle.dumps(cart_dict)).decode()
+                # 设置cookie
+                response.set_cookie('carts', cart_str)
 
 
-            pass
+        return response
+
+
 
 
 
