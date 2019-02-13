@@ -18,6 +18,7 @@ class CartView(APIView):
         """禁用认证/延后认证"""
         pass
 
+
     def post(self, request):
         """添加购物车"""
         serializer = CartSerializer(data=request.data)
@@ -135,8 +136,6 @@ class CartView(APIView):
             else:
                 cart_dict = {}
 
-
-
         # 以下序列化的代码无论登录还是未登录都要执行,注意缩进问题
 
         # 获取购物车中所有商品的sku模型
@@ -150,8 +149,6 @@ class CartView(APIView):
         # 创建序列化器进行序列化操作
         serializer = CartSKUSerializer(skus, many=True)
         return Response(serializer.data)
-
-
 
     """
     {
@@ -212,7 +209,6 @@ class CartView(APIView):
 
         return response
 
-
     def delete(self, request):
         """删除购物车"""
         serializer = CartDeleteSerializer(data=request.data)
@@ -246,7 +242,7 @@ class CartView(APIView):
                 # 把要删除的sku_id从cart_dict字典中移除
                 if sku_id in cart_dict:
                     del cart_dict[sku_id]
-                if len(cart_dict.keys()): # if成立给cookie字典中还有商品
+                if len(cart_dict.keys()):  # if成立给cookie字典中还有商品
                     # 把cart_dict 转换成 cart_str
                     cart_str = base64.b64encode(pickle.dumps(cart_dict)).decode()
                     # 设置cookie
@@ -311,11 +307,4 @@ class CartSelectedView(APIView):
                 # 设置cookie
                 response.set_cookie('carts', cart_str)
 
-
         return response
-
-
-
-
-
-
