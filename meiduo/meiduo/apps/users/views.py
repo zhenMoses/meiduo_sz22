@@ -20,10 +20,10 @@ from goods.serializers import SKUSerializer
 from carts.utils import merge_cart_cookie_to_redis
 
 
-
 # Create your views here.
 class UserAuthorizeView(ObtainJSONWebToken):
     """重写账号密码登录视图"""
+
     def post(self, request, *args, **kwargs):
         response = super(UserAuthorizeView, self).post(request, *args, **kwargs)
         serializer = self.get_serializer(data=request.data)
@@ -33,8 +33,6 @@ class UserAuthorizeView(ObtainJSONWebToken):
             merge_cart_cookie_to_redis(request, user, response)
 
         return response
-
-
 
 
 # POST/GET  /browse_histories/
@@ -65,8 +63,6 @@ class UserBrowseHistoryView(CreateAPIView):
         serializer = SKUSerializer(sku_list, many=True)
 
         return Response(serializer.data)
-
-
 
 
 class AddressViewSet(UpdateModelMixin, CreateModelMixin, GenericViewSet):
