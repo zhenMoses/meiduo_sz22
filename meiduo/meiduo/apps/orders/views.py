@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.generics import CreateAPIView
 
 from goods.models import SKU
-from .serializers import OrderSettlementSerializer
+from .serializers import OrderSettlementSerializer, CommitOrderSerializer
 
 
 # Create your views here.
