@@ -4,12 +4,22 @@ from rest_framework.permissions import IsAuthenticated
 from django_redis import get_redis_connection
 from decimal import Decimal
 from rest_framework.response import Response
+from rest_framework.generics import CreateAPIView
 
 from goods.models import SKU
 from .serializers import OrderSettlementSerializer
 
 
 # Create your views here.
+class CommitOrderView(CreateAPIView):
+
+    # 指定权限
+    permission_classes = [IsAuthenticated]
+
+    # 指定序列化器
+    serializer_class = CommitOrderSerializer
+
+
 class OrderSettlementView(APIView):
     """去结算接口"""
 
