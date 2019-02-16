@@ -58,3 +58,14 @@ class PaymentView(APIView):
         return Response({'alipay_url': alipay_url})
 
 # 2.支付成功后的验证和修改订单状态 保存订单及支付流水号
+class PaymentStatusView(APIView):
+
+    def put(self, request):
+        # 获取查询参数中的所有数据 query_params  /django  GET
+        # 把查询参数中的sign签名部分数据单独提取出
+        # 调用alipay中的verify方法进行验证支付信息
+
+        # 把交易号和订单编号进行绑定存储
+        # 修改订单状态
+        pass
+
