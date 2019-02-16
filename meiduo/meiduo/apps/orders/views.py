@@ -33,7 +33,6 @@ class OrderSettlementView(APIView):
         redis_conn = get_redis_connection('cart')
         redis_cart = redis_conn.hgetall('cart_%s' % user.id)
         cart_selected = redis_conn.smembers('selected_%s' % user.id)
-
         cart = {}
         for sku_id in cart_selected:
             cart[int(sku_id)] = int(redis_cart[sku_id])
