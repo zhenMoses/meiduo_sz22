@@ -1,9 +1,9 @@
 from django.db import models
 
-from meiduo.utils.models import BaseModel
-
-
 # Create your models here.
+from meiduo_mall.utils.models import BaseModel
+
+
 class ContentCategory(BaseModel):
     """
     广告内容类别

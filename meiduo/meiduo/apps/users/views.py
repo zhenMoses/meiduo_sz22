@@ -1,51 +1,250 @@
+import re
+from datetime import datetime
+import pickle,base64
+import json
+from random import randint
+
+from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import render
+from django_redis import get_redis_connection
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.generics import CreateAPIView, ListAPIView
-from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import RetrieveAPIView, UpdateAPIView
-from rest_framework.viewsets import GenericViewSet
-from rest_framework.mixins import CreateModelMixin, UpdateModelMixin
-from django_redis import get_redis_connection
-from rest_framework_jwt.views import ObtainJSONWebToken
 
+from rest_framework_jwt.settings import api_settings
+from rest_framework.views import APIView
+from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.mixins import CreateModelMixin, UpdateModelMixin, ListModelMixin
+from rest_framework.viewsets import GenericViewSet
+from rest_framework_jwt.views import ObtainJSONWebToken, jwt_response_payload_handler
+
+from carts.utils import merge_cart_cookie_to_redis
+from goods.models import SKU
+from goods.serializers import SKUSerializer
+from meiduo_mall.utils.captcha.captcha import captcha
+from meiduo_mall.utils.exceptions import logger
+
+from celery_tasks.sms.tasks import send_sms_code
+from users import constants
+from users.utils import get_user_by_account
+from .models import User
 from .serializers import UserSerializer, UserDetailSerializer, EmailSerializer, UserAddressSerializer, \
     AddressTitleSerializer, UserBrowseHistorySerializer
 
-from .models import User, Address
-from goods.models import SKU
-from goods.serializers import SKUSerializer
-from carts.utils import merge_cart_cookie_to_redis
 
 
-# Create your views here.
+class ImageCheckView(APIView):
+    """忘记密码之验证图片验证码"""
+    def get(self,request,username):
+
+        # 获取图片验证码的信息uuid
+        image_code_id = request.query_params.get('image_code_id')
+        # 获取前端发送的验证码信息
+        image_code = request.query_params.get('text')
+        # 判断用户是否存在
+        try:
+            user =User.objects.get(mobile=username)
+        except Exception:
+            return Response({'messsage':'查询数据失败'},status=status.HTTP_404_NOT_FOUND)
+
+        if not user:
+            return Response({'message':'用户不存在'},status=status.HTTP_400_BAD_REQUEST)
+        # 手动生成token
+        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER  # 加载生成载荷函数
+        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER  # 加载生成token函数
+
+        payload = jwt_payload_handler(user)  # 生成载荷
+        token = jwt_encode_handler(payload)  # 根据载荷生成token
+
+        data ={
+            'access_token':token,
+            'mobile':user.mobile
+        }
+        # 创建redis连接对象
+        redis_conn = get_redis_connection('image')
+        # 获取redis数据库中图片验证码
+        real_image_code = redis_conn.get('image_%s' % image_code_id)
+
+        # 因为手机号是前端自己绑定,没有传送,而在短信验证码,需要传手机号,token是连接两步的唯一枢纽,所以以token为key保存手机号码
+        redis_conn.setex('token_%s' % token, constants.SMS_CODE_REDIS_EXPIRES, user.mobile)
+        # 判断是否存在图片验证码
+        if not real_image_code:
+            return Response({'message':'图片验证码过期'},status=status.HTTP_404_NOT_FOUND)
+
+        # else:
+        #     redis_conn.delete("image_%s" % image_code_id)
+
+        if image_code.lower() != real_image_code.lower().decode():
+            return Response({'message':'图片验证码错误'},status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(data)
+
+
+class FindPWSMSView(APIView):
+    """忘记密码之发送短信验证码"""
+    # sms_codes /?access_token
+    def get(self,request):
+        # 获取access_token的值
+        token = request.query_params.get('access_token')
+
+        if not token:
+            return Response({'message': '缺少access_token的值'}, status=status.HTTP_400_BAD_REQUEST)
+        # 0.创建redis连接对象
+        redis_conn = get_redis_connection('image')
+        # 因为只有token是枢纽,根据token的值,查出mobile
+        mobile =redis_conn.get('token_%s' % token).decode()
+
+        # 0.创建redis连接对象
+        redis_conn = get_redis_connection('verify_codes')
+        # 1.获取此手机号是否有发送过的标记
+        flag = redis_conn.get('send_flag_%s' % mobile)
+        # 2.如果已发送就提前响应,不执行后续代码
+        if flag:  # 如果if成立说明此手机号60秒内发过短信
+            return Response({'message': '频繁发送短信'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 3生成六位随机验证码
+        smc_code = '%06d' % randint(0, 999999)
+        logger.info(smc_code)
+        # 创建redis的管道命令
+        pl = redis_conn.pipeline()
+
+        # 4把短信验证码缓存到redis  setex(key 过期时间, value)
+        pl.setex('sms_%s' % mobile, constants.SMS_CODE_REDIS_EXPIRES, smc_code)
+        # 4.1 存储此手机号已发送短信标记
+        pl.setex('send_flag_%s' % mobile, constants.SMS_CODE_REDIS_SIANS, 1)
+
+        # 执行管道
+        pl.execute()
+        # 5使用容联云通讯去发送短信  send_template_sms(self, to, datas, temp_id)
+        # CCP().send_template_sms( mobile,[smc_code,constants.SMS_CODE_REDIS_EXPIRES // 60],1)
+
+        # 触发异步任务(让发短信不要阻塞主线程)
+        send_sms_code.delay(mobile, smc_code)
+        # 6响应结果
+
+
+        return Response({'message':'ok'})
+
+
+
+class SMSCheckView(APIView):
+    """重置密码之验证短信验证码"""
+    #     '/accounts/' + this.username + '/password/token/?sms_code='
+    def get(self, request, mobile):
+        smc_code = request.query_params.get('sms_code')
+
+        redis_conn = get_redis_connection('verify_codes')
+        real_smc_code = redis_conn.get('sms_%s' % mobile)
+
+        if not real_smc_code:
+            return Response({'message': '短信验证码过期'}, status=status.HTTP_404_NOT_FOUND)
+        #
+        if smc_code != real_smc_code.decode():
+            return Response({'message': '短信验证码错误'})
+        try:
+            user = User.objects.get(mobile=mobile)
+        except:
+            return Response({'message': '手机号不存在'})
+
+        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER  # 加载生成载荷函数
+        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER  # 加载生成token函数
+
+        payload = jwt_payload_handler(user)  # 生成载荷
+        token = jwt_encode_handler(payload)  # 根据载荷生成token
+
+        data = {
+            'access_token': token,
+            'user_id': user.id,
+            'username':user.username
+        }
+
+        return Response(data)
+
+
+class FindResetPWView(APIView):
+    """忘记密码之重置密码"""
+
+    def post(self,request,pk):
+        password = request.data.get('password')
+        password2 = request.data.get('password2')
+
+
+        try:
+            user = User.objects.get(id=pk)
+        except User.DoesExist:
+            return Response({'message':'用户不存在'},status=status.HTTP_404_NOT_FOUND)
+
+        if not all([password,password2]):
+            return Response({'message':'参数不全'},status=status.HTTP_400_BAD_REQUEST)
+
+        if not re.match(r'\w{8,20}$', password):
+            return Response({'message':'密码不符合规则'},status=status.HTTP_400_BAD_REQUEST)
+
+        if password !=password2:
+            raise Exception('两次密码输入不一致')
+        user.set_password(password)
+        user.save()
+        return Response({'message':'ok'},status=status.HTTP_201_CREATED)
+
+
+class ImageCodeView(APIView):
+    """忘记密码的获取图片验证码,"""
+
+    def get(self, request, image_code_id):
+        # 建立redis连接
+        mage_name, real_image_code, image_data = captcha.generate_captcha()
+
+        redis_conn = get_redis_connection('image')
+        pl = redis_conn.pipeline()
+        pl.setex("image_%s" % image_code_id, 300, real_image_code)
+        pl.execute()
+        return HttpResponse(image_data,content_type='image/jpg')
+
+
+
+
+class PasswordUpdateView(APIView):
+    """修改密码"""
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk):
+        data = request.data
+
+        try:
+            user = User.objects.get(id=pk)
+        except User.DoesExist:
+            raise Exception('用户不存在')
+        if not user.check_password(data['old_password']):
+            raise Exception('原密码错误')
+        if data['password'] != data['password2']:
+            raise Exception('两次密码输入不一致')
+        user.set_password(data['password'])
+        user.save()
+        return Response({"message": 'OK'})
+
+
 class UserAuthorizeView(ObtainJSONWebToken):
     """重写账号密码登录视图"""
 
     def post(self, request, *args, **kwargs):
         response = super(UserAuthorizeView, self).post(request, *args, **kwargs)
         serializer = self.get_serializer(data=request.data)
-
         if serializer.is_valid():
             user = serializer.object.get('user') or request.user
             merge_cart_cookie_to_redis(request, user, response)
 
-        return response
+            return response
 
 
-# POST/GET  /browse_histories/
 class UserBrowseHistoryView(CreateAPIView):
-    """用户浏览记录"""
-
-    # 指定序列化器(校验)
+    """用户浏览商品记录"""
     serializer_class = UserBrowseHistorySerializer
-    # 指定权限
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """读取用户浏览记录"""
+        """读取用户的浏览记录"""
         # 创建redis连接对象
         redis_conn = get_redis_connection('history')
         # 查询出redis中当前登录用户的浏览记录[b'1', b'2', b'3']
@@ -65,28 +264,12 @@ class UserBrowseHistoryView(CreateAPIView):
         return Response(serializer.data)
 
 
-class AddressViewSet(UpdateModelMixin, CreateModelMixin, GenericViewSet):
-    """用户收货地址"""
-    permission_classes = [IsAuthenticated]
-
+class AddressViewSet(CreateModelMixin, UpdateModelMixin, GenericViewSet):
+    """
+    用户地址新增与修改
+    """
     serializer_class = UserAddressSerializer
-
-    def create(self, request, *args, **kwargs):
-        """新增收货地址"""
-        # 判断用户的收货地址数量是否上限
-        # address_count = Address.objects.filter(user=request.user).count()
-        address_count = request.user.addresses.count()
-        if address_count > 20:
-            return Response({'message': '收货地址数量上限'}, status=status.HTTP_400_BAD_REQUEST)
-        # # 创建序列化器给data参数传值(反序列化)
-        #         # serializer = UserAddressSerializer(data=request.data, context={'request': request})
-        #         # # 调用序列化器的is_valid方法
-        #         # serializer.is_valid(raise_exception=True)
-        #         # # 调用序列化器的save
-        #         # serializer.save()
-        #         # # 响应
-        #         # return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return super(AddressViewSet, self).create(request, *args, **kwargs)
+    permissions = [IsAuthenticated]
 
     def get_queryset(self):
         return self.request.user.addresses.filter(is_deleted=False)
@@ -99,13 +282,27 @@ class AddressViewSet(UpdateModelMixin, CreateModelMixin, GenericViewSet):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         user = self.request.user
+
         return Response({
             'user_id': user.id,
             'default_address_id': user.default_address_id,
-            'limit': 20,
-            'addresses': serializer.data
+            'limit': constants.USER_ADDRESS_COUNTS_LIMIT,
+            'addresses': serializer.data,
         })
 
+    # POST /addresses/
+    def create(self, request, *args, **kwargs):
+        """
+        保存用户地址数据
+        """
+        # 检查用户地址数据数目不能超过上限
+        count = request.user.addresses.count()
+        if count >= constants.USER_ADDRESS_COUNTS_LIMIT:
+            return Response({'message': '保存地址数据已达到上限'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().create(request, *args, **kwargs)
+
+    # delete /addresses/<pk>/
     def destroy(self, request, *args, **kwargs):
         """
         处理删除
@@ -144,10 +341,11 @@ class AddressViewSet(UpdateModelMixin, CreateModelMixin, GenericViewSet):
 
 
 class EmailVerifyView(APIView):
-    """激活邮箱"""
+    """激活邮箱
+        为什么要用APIView,因为只有查询get操作,没有用到序列化和反序列化
+    """
 
     def get(self, request):
-
         # 1.获取前token查询参数
         token = request.query_params.get('token')
         if not token:
@@ -155,7 +353,6 @@ class EmailVerifyView(APIView):
 
         # 对token解密并返回查询到的user
         user = User.check_verify_email_token(token)
-
         if not user:
             return Response({'message': '无效token'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -166,29 +363,25 @@ class EmailVerifyView(APIView):
         return Response({'message': 'ok'})
 
 
-# PUT  /email/
 class EmailView(UpdateAPIView):
-    """保存邮箱"""
     permission_classes = [IsAuthenticated]
-    # 指定序列化器
     serializer_class = EmailSerializer
 
     def get_object(self):
         return self.request.user
 
 
-"""
+# Create your views here.
 # GET   /user/
-class UserDetailView(APIView):
-    # 提供用户个人信息接口
-    # 指定权限,必须是通过认证的用户才能访问此接口(就是当前本网站的登录用户)
-    permission_classes = [IsAuthenticated] 
-
-    def get(self, request):
-        user = request.user  # 获取本次请求的用户对象
-        serializer = UserDetailSerializer(user)
-        return Response(serializer.data)
-"""
+# class UserDetailView(APIView):
+#     """用户中心个人信息视图"""
+#     # 指定权限,必须是通过认证的用户才能访问此接口(就是当前本网站的登录用户)
+#     permission_classes = [IsAuthenticated]
+#
+#     def get_object(self,request):
+#         user = request.user  # 获取本次请求的用户对象
+#         serializer = UserDetailSerializer  # 指定序列化器
+#         return  Response(serializer.data)
 
 
 class UserDetailView(RetrieveAPIView):
@@ -204,33 +397,32 @@ class UserDetailView(RetrieveAPIView):
 
 # POST /users/
 class UserView(CreateAPIView):
-    """用户注册"""
     # 指定序列化器
     serializer_class = UserSerializer
 
 
 # url(r'^usernames/(?P<username>\w{5,20})/count/$', views.UsernameCountView.as_view()),
 class UsernameCountView(APIView):
-    """验证用户名是否已存在"""
+    """用户是否存在"""
 
     def get(self, request, username):
-        # 查询用户名是否已存在
+        # 查询用户是否存在
         count = User.objects.filter(username=username).count()
-
-        # 构建响应数据
+        # 构造响应数据
         data = {
-            'count': count,
-            'username': username
+            'username': username,
+            'count': count
         }
+
         return Response(data)
 
 
 # url(r'^mobiles/(?P<mobile>1[3-9]\d{9})/count/$', views.MobileCountView.as_view()),
 class MobileCountView(APIView):
-    """验证手机号是否已存在"""
+    """"验证手机号是否已存在"""
 
     def get(self, request, mobile):
-        # 查询手机号数量
+        # 根据前端传来的手机号,查询这个手机号的数量,1代表已存在,0代表无
         count = User.objects.filter(mobile=mobile).count()
 
         data = {

@@ -1,5 +1,9 @@
 from django.db import models
-from meiduo.utils.models import BaseModel
+# Create your models here.
+
+from django.db import models
+
+from meiduo_mall.utils.models import BaseModel
 from orders.models import OrderInfo
 
 # Create your models here.

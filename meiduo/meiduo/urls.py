@@ -24,7 +24,8 @@ urlpatterns = [
     url(r'xadmin/', include(xadmin.site.urls)),
     # 富文本编辑界面路由
     url(r'^ckeditor/', include('ckeditor_uploader.urls')),
-
+	# 微博模块
+    url(r'^oauth/',include('sina.urls')),
     # 包含发短信模块路由
     url(r'^', include('verifications.urls')),
     # 用户模块路由
