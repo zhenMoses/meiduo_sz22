@@ -85,16 +85,15 @@ class SinaWeiBoUserView(APIView):
 
 class  WeiboAuthURLView(APIView):
     """生成微博扫码url"""
-    def get(self, request):
 
+
+    def get(self, request):
         next =request.query_params.get('next')
         if not next:
             next = '/'
 
         sina = WeiboSDK(client_id=settings.WEIBO_CLIENT_ID, client_secret=settings.WEIBO_CLIENT_SECRET,
-                         redirect_uri=settings.WEIBO_REDIRECT_URI)
-        # 3.调用它里面的get_qq_url方法来拿到拼接好的扫码链接
+                         redirect_uri=settings.WEIBO_REDIRECT_URI, state=next)
         login_url = sina.get_weibo_login_url()
-
         # 4.把扫码url响应给前端
         return Response({'login_url': login_url})

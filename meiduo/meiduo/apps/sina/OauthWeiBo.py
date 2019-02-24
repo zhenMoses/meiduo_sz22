@@ -32,10 +32,11 @@ from urllib.parse import urlencode
 class WeiboSDK(object):
     """微博登录sdk"""
 
-    def __init__(self, client_id=None, client_secret=None, redirect_uri=None):
+    def __init__(self, client_id=None, client_secret=None, redirect_uri=None,state=None):
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
+        self.state = state
 
     def get_weibo_login_url(self):
         """获取微博登录的url"""
@@ -43,6 +44,7 @@ class WeiboSDK(object):
             'client_id': self.client_id,
             'response_type': 'code',
             'redirect_uri': self.redirect_uri,
+            'state': self.state,
         }
 
         # 构建认证登录的url
