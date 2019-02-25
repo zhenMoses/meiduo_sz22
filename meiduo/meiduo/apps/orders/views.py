@@ -63,36 +63,3 @@ class SaveOrderView(CreateAPIView):
     serializer_class = SaveOrderSerializer
 
 
-
-class UnCommentOrderView(GenericAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = OrderGoodSerializer
-
-    def get(self,request,order_id):
-
-        order=OrderGoods.objects.filter(order_id=order_id).order_by('create_time')
-        serializer=self.get_serializer(order,many=True)
-        return Response(serializer.data)
-
-
-
-
-class CommentOrderView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-    # def put(self,request,order_id):
-    #     sku=request.data.get('sku_id')
-    #     try:
-    #
-    #         OrderGoods.objects.get(order_id=order_id,sku_id=sku).update(score=request.data.get('score'),is_commented=True,is_anonymous=request.data.get('is_anonymous'))
-    #     except OrderGoods.DoesExist:
-    #         return Response({'message':'订单商品不存在'})
-    #
-    #     serializer = CommentSerialzier(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-    #
-    #     serializer=CommentSerialzier(sku,many=True)
-    #     return Response(serializer.data)
-
-    pass
