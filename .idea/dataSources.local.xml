@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="dataSourceStorageLocal">
+    <data-source name="meiduo_mall_sz22@localhost" uuid="4a4649fd-0644-4560-9056-a1aba9bd4758">
+      <database-info product="MySQL" version="5.7.25-0ubuntu0.16.04.2-log" jdbc-version="4.0" driver-name="MySQL Connector Java" driver-version="mysql-connector-java-5.1.46 ( Revision: 9cc87a48e75c2d2e87c1a293b2862ce651cb256e )">
+        <extra-name-characters>#@</extra-name-characters>
+        <identifier-quote-string>`</identifier-quote-string>
+      </database-info>
+      <case-sensitivity plain-identifiers="exact" quoted-identifiers="exact" />
+      <secret-storage>master_key</secret-storage>
+      <user-name>meiduo</user-name>
+      <resolve-scope>meiduo_mall_sz22:</resolve-scope>
+    </data-source>
+    <data-source name="meiduo_mall@localhost [2]" uuid="ae3f0b84-b453-4675-b4f8-a74bb8fac895">
+      <database-info product="MySQL" version="5.7.25-0ubuntu0.16.04.2-log" jdbc-version="4.0" driver-name="MySQL Connector Java" driver-version="mysql-connector-java-5.1.46 ( Revision: 9cc87a48e75c2d2e87c1a293b2862ce651cb256e )">
+        <extra-name-characters>#@</extra-name-characters>
+        <identifier-quote-string>`</identifier-quote-string>
+      </database-info>
+      <case-sensitivity plain-identifiers="exact" quoted-identifiers="exact" />
+      <secret-storage>master_key</secret-storage>
+      <user-name>root</user-name>
+      <resolve-scope>meiduo_mall:</resolve-scope>
+    </data-source>
+    <data-source name="@localhost" uuid="de800a8c-23b5-4fbd-858c-39d7d47ce78b">
+      <database-info product="" version="" jdbc-version="" driver-name="" driver-version="" />
+      <secret-storage>master_key</secret-storage>
+      <first-sync>true</first-sync>
+      <user-name>meiduo22</user-name>
+    </data-source>
+  </component>
+</project>

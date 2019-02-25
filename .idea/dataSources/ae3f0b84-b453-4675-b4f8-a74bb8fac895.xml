@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataSource name="meiduo_mall@localhost [2]">
+  <database-model serializer="dbm" rdbms="MYSQL" format-version="4.0">
+    <root id="1"/>
+    <schema id="2" parent="1" name="meiduo_mall">
+      <Current>1</Current>
+      <Visible>1</Visible>
+    </schema>
+    <schema id="3" parent="1" name="author_book22"/>
+    <schema id="4" parent="1" name="company"/>
+    <schema id="5" parent="1" name="django_demo23"/>
+    <schema id="6" parent="1" name="information"/>
+    <schema id="7" parent="1" name="information22"/>
+    <schema id="8" parent="1" name="information_schema"/>
+    <schema id="9" parent="1" name="itcast_db"/>
+    <schema id="10" parent="1" name="jing_dong"/>
+    <schema id="11" parent="1" name="meiduo_mall_sz22"/>
+    <schema id="12" parent="1" name="migrate22"/>
+    <schema id="13" parent="1" name="mysql"/>
+    <schema id="14" parent="1" name="performance_schema"/>
+    <schema id="15" parent="1" name="py22"/>
+    <schema id="16" parent="1" name="py23"/>
+    <schema id="17" parent="1" name="py24"/>
+    <schema id="18" parent="1" name="py25"/>
+    <schema id="19" parent="1" name="python_1"/>
+    <schema id="20" parent="1" name="python_2"/>
+    <schema id="21" parent="1" name="stock_db"/>
+    <schema id="22" parent="1" name="sys"/>
+    <schema id="23" parent="1" name="tables23"/>
+  </database-model>
+</dataSource>
