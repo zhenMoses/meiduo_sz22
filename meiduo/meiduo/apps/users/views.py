@@ -1,4 +1,6 @@
+import re
 
+from django.db.models import Q
 from django.shortcuts import render
 from django_redis import get_redis_connection
 from rest_framework import status
@@ -80,10 +82,10 @@ class CheckImageAPIView(APIView):
             return Response({"message": "参数不全"}, status=status.HTTP_400_BAD_REQUEST)
 
         access_token = generate_save_user_token(user.mobile)
-        mobile=user.mobile
-        mobile=mobile.replace(mobile[3:7], '****')
+        # mobile=user.mobile
+        # mobile=mobile.replace(mobile[3:7], '****')
         return Response({
-            "mobile": mobile,
+            "mobile": user.mobile,
             "access_token": access_token,
         })
 

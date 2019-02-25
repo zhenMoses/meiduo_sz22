@@ -133,7 +133,7 @@ var vm = new Vue({
                 return;
             }
             this.sending_flag = true;
-            axios.get(this.host+'/sms_codes/?access_token='+ this.access_token, {
+            axios.get(this.host+'/sms_codes/'+ this.mobile +'/?access_token='+ this.access_token, {
                     responseType: 'json'
                 })
                 .then(response => {
@@ -165,7 +165,7 @@ var vm = new Vue({
         form_2_on_submit: function(){
             this.check_sms_code();
             if (this.error_sms_code == false) {
-                axios.get(this.host + '/accounts/' + this.username + '/password/token/?sms_code=' + this.sms_code, {
+                axios.get(this.host + '/accounts/' + this.mobile + '/password/token/?sms_code=' + this.sms_code, {
                         responseType: 'json'
                     })
                     .then(response => {
