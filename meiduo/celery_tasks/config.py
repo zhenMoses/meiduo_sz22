@@ -1,1 +1,1 @@
-# 指定celery配置文件# 配置celery异步任务存放的位置broker_url = "redis://192.168.103.210/7"
+# 指定celery配置文件# 配置celery异步任务存放的位置broker_url = "redis://192.168.133.222/7"

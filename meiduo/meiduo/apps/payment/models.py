@@ -3,7 +3,7 @@ from django.db import models
 
 from django.db import models
 
-from meiduo_mall.utils.models import BaseModel
+from meiduo.utils.models import BaseModel
 from orders.models import OrderInfo
 
 # Create your models here.

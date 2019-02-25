@@ -1,5 +1,5 @@
 from django.db import models
-from meido_mall.utils.models import BaseModel
+from meiduo.utils.models import BaseModel
 from ckeditor_uploader.fields import RichTextUploadingField
 from ckeditor.fields import RichTextField
 

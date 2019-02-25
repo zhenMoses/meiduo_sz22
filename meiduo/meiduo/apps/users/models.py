@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from itsdangerous import  TimedJSONWebSignatureSerializer as Serializer, BadData
 from django.conf import settings
 # Create your models here.
-from meido_mall.utils.models import BaseModel
+from meiduo.utils.models import BaseModel
 
 
 class User(AbstractUser):

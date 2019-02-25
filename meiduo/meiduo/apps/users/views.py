@@ -12,7 +12,7 @@ from rest_framework_jwt.views import ObtainJSONWebToken
 
 from goods.models import SKU
 from goods.serializers import SKUSerializer
-from meido_mall.utils.pagination import StandardResultsSetPagination
+from meiduo.utils.paginations import StandardResultsSetPagination
 from orders.models import OrderInfo
 from users import serializers
 from .serializers import UserSerializer, UserDetailSerializer, UserAddressSerializer, AddressTitleSerializer, \

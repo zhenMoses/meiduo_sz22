@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
 
-from meiduo_mall.utils.exceptions import logger
+from meiduo.utils.exceptions import logger
 from oauth.utils import generate_save_user_token
 from sina.models import SinaAuthUser
 from sina.serializers import SinaWeiboUserSerializer
