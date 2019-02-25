@@ -1,60 +1,39 @@
 from django.shortcuts import render
-
-from rest_framework.generics import ListAPIView, GenericAPIView
 from rest_framework.filters import OrderingFilter
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import ListAPIView, GenericAPIView
 from rest_framework.response import Response
 
-from meiduo_mall.utils.paginations import StandardResultsSetPagination
-from orders.models import OrderInfo, OrderGoods
-
-from .models import SKU
-from .serializers import SKUSerializer, SKUIndexSerializer, OrderDefaultSerialzier, OrderGoodSerializer
-
-from drf_haystack.viewsets import HaystackViewSet
-
-class SKUSearchViewSet(HaystackViewSet):
-    """
-    SKU搜索
-    """
-    index_models = [SKU]
-
-    serializer_class = SKUIndexSerializer
-
-
+from goods.models import SKU
+from goods.serializers import SKUSerializer, SKUCommentsSerializer
 # Create your views here.
-# /categories/(?P<category_id>\d+)/skus?page=xxx&page_size=xxx&ordering=xxx
+from orders.models import OrderGoods
+
+
 class SKUListView(ListAPIView):
-    """商品列表界面"""
-
-    # 指定序列化器
+    """sku列表数据"""
     serializer_class = SKUSerializer
-
-    # 指定过滤后端为排序
-    filter_backends = [OrderingFilter]
-    # 指定排序字段
-    ordering_fields = ['create_time', 'price', 'sales']
-
-    # 指定查询集
-    # queryset = SKU.objects.filter(is_launched=True, category_id=category_id)
+    filter_backends = (OrderingFilter,)
+    ordering_fields = ('create_time', 'price', 'sales')
 
     def get_queryset(self):
-        category_id = self.kwargs.get('category_id')  # 获取url路径中的正则组别名提取出来的参数
-        return SKU.objects.filter(is_launched=True, category_id=category_id)
+        category_id = self.kwargs['category_id']
+        return SKU.objects.filter(category_id=category_id, is_launched=True)
 
 
-#  r'^order/?page=xxx&page_size=xxx'
-class OrderDefaultView(ListAPIView):
-    """订单列表展示"""
-    permission_classes = [IsAuthenticated]
-    serializer_class = OrderDefaultSerialzier
-    pagination_class = StandardResultsSetPagination
+class SKUComments(GenericAPIView):
+    """sku评论"""
+    serializer_class = SKUCommentsSerializer
+    # 查询用户名数据
 
-    def get_queryset(self):
-        user = self.request.user
-        queryset = OrderInfo.objects.filter(user_id=user.id).all().order_by('create_time')
-        # seroalzier = OrderDefaultSerialzier(seroalzier, many=True)
-        # return Response({'results': seroalzier.data})
-        return queryset
+    def get(self, request, sku_id):
+        queryset = OrderGoods.objects.filter(sku_id=sku_id, is_commented=True)
+        for i in queryset:
+            if i.is_anonymous:
+                i.username = i.order.user.username
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+
 
 

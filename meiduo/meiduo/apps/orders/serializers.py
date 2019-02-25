@@ -1,3 +1,4 @@
+
 # from datetime import timezone
 # from time import timezone
 from django.utils import timezone
@@ -7,9 +8,11 @@ from django_redis import get_redis_connection
 from django.db import transaction
 
 from goods.models import SKU
+from users.serializers import OrderGoodSerializer
 from .models import OrderInfo, OrderGoods
 
-class SaveOrderSerializer(serializers.ModelSerializer):
+
+class CommitOrderSerializer(serializers.ModelSerializer):
     """保存订单序列化器"""
 
     class Meta:
@@ -98,8 +101,6 @@ class SaveOrderSerializer(serializers.ModelSerializer):
                         if sku_count > origin_stock:
                             raise serializers.ValidationError('库存不足')
 
-                        # import time
-                        # time.sleep(5)
 
                         # 计算新库存和销量
                         new_stock = origin_stock - sku_count
@@ -135,7 +136,6 @@ class SaveOrderSerializer(serializers.ModelSerializer):
                         break  # 跳出无限循环,继续对下一个sku_id进行下单
                 # 最后加入邮费和保存订单信息(只累加一次运费)
                 order.total_amount += order.freight
-                print(order.total_amount)
                 order.save()
             except Exception:
                 # 暴力回滚,无论中间出现什么问题全部回滚
@@ -153,7 +153,6 @@ class SaveOrderSerializer(serializers.ModelSerializer):
         return order
 
 
-
 class CartSKUSerializer(serializers.ModelSerializer):
     """
     购物车商品数据序列化器
@@ -163,7 +162,6 @@ class CartSKUSerializer(serializers.ModelSerializer):
     class Meta:
         model = SKU
         fields = ('id', 'name', 'default_image_url', 'price', 'count')
-
 
 
 class OrderSettlementSerializer(serializers.Serializer):
@@ -179,21 +177,71 @@ class OrderSettlementSerializer(serializers.Serializer):
 
 
 
-class CommentSerialzier(serializers.ModelSerializer):
-    class Meta:
-        model=OrderGoods
-        fields = ['comment','score','is_anonymous','is_commented']
-        extra_kwargs={
-            'comment':{
-                'min_length': 5,
-                'required': True,
-                'error_messages': {
-                    'min_length': '仅允许5-20个字符的用户名',
+class GoodsComments(serializers.ModelSerializer):
+    """商品评论序列化器"""
 
-                }
-            },
+    class Meta:
+        model = OrderGoods
+        fields = ['comment', 'score', 'is_anonymous', 'is_commented']
+        #  is_commented只做输入
+        extra_kwargs = {
+            'is_commented': {
+                'write_only': True,
+            }
         }
 
+    def update(self, instance, validated_data):
+        """重写序列化器的update方法进行存储商品评价"""
+        # 订单商品表  sku 两个表要么一起成功 要么一起失败
+
+        # 获取当前商品评论时需要的信息
+        # 获取订单编号
+        order_id = validated_data.get('order')
+        # 获取是否匿名评价
+        is_anonymous = validated_data.get('is_anonymous')
+        # 获取评价内容
+        comment = validated_data.get('comment')
+        # 获取评价分数
+        score = validated_data.get('score')
+
+        # 开启一个事务
+        with transaction.atomic():
+
+            # 创建事务保存点
+            save_point = transaction.savepoint()
+            try:
+
+                # 保存订单商品信息 OrderGoods（一）
+                instance.is_anonymous = is_anonymous
+                instance.is_commented = True
+                instance.comment = comment
+                instance.score = score
+
+                instance.save()
 
 
+                # 获取sku对象
+                sku_id =self.context["request"].data.get("sku")
+                sku = SKU.objects.get(id=sku_id)
+                # 获取查询出sku那一刻的评论
+                origin_comments = sku.comments
+                 # 增加评价数 SKU   乐观锁
+                comments = origin_comments + 1
+                result = SKU.objects.filter(id=sku.id, comments=origin_comments).update(comments=comments)
+                goods = OrderGoods.objects.filter(order_id=order_id)
+                order = OrderInfo.objects.get(order_id=order_id)
+                is_commenteds = []
+                for good in goods:
+                    is_commenteds.append(good.is_commented)
+                if all(is_commenteds):
+                    order.status = 5
+                    order.save()
 
+            except Exception:
+                # 暴力回滚,无论中间出现什么问题全部回滚
+                transaction.savepoint_rollback(save_point)
+                raise
+            else:
+                transaction.savepoint_commit(save_point)  # 如果中间没有出现异常提交事件
+
+        return instance
