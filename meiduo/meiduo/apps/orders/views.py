@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from rest_framework import serializers, status
 from rest_framework.filters import OrderingFilter
 from rest_framework.views import APIView
@@ -61,8 +61,11 @@ class GoodsUncomments(GenericAPIView):
     serializer_class = OrderGoodSerializer
 
     def get(self, request, order_id):
-        user = self.request.user
-
+        user = request.user
+        try:
+            user.orderinfo_set.get(order_id=order_id)
+        except Exception:
+            raise
         order = OrderGoods.objects.filter(order_id=order_id).order_by('create_time')
         serializer = self.get_serializer(order, many=True)
         return Response(serializer.data)
@@ -84,6 +87,10 @@ class GoodsComment(GenericAPIView):
     """
     def put(self, request, order_id):
         data = request.data
+        try:
+            request.user.orderinfo_set.get(order_id=order_id)
+        except Exception:
+            return redirect('/index.html')
         # 开启一个事务
         with transaction.atomic():
 

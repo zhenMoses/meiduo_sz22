@@ -29,6 +29,8 @@ class SKUComments(GenericAPIView):
         queryset = OrderGoods.objects.filter(sku_id=sku_id, is_commented=True)
         for i in queryset:
             if i.is_anonymous:
+                i.username = i.order.user.username.replace(i.order.user.username[1:-1], '******')
+            else:
                 i.username = i.order.user.username
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)

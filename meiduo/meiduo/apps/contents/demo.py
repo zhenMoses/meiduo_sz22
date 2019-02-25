@@ -1,0 +1,2 @@
+def xixi():
+    print('jiumi')

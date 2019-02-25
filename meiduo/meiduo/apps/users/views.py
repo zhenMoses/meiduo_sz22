@@ -157,17 +157,16 @@ class PasswordUpdateView(APIView):
         try:
             user = User.objects.get(id=pk)
         except User.DoesExist:
-            raise Exception('用户不存在')
+            return Response({'message': '用户不存在'}, status=status.HTTP_404_NOT_FOUND)
         if not user.check_password(data['old_password']):
-            raise Exception('原密码错误')
-        elif not re.match(r'\w{8,20}$', data['psssword']):
-            return Response({'message':'密码不符合规则'},status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': '原密码错误'}, status=status.HTTP_400_BAD_REQUEST)
+        elif not re.match(r'\w{8,20}$', data['password']):
+            return Response({'message': '密码不符合规则'}, status=status.HTTP_400_BAD_REQUEST)
         elif data['password'] != data['password2']:
             raise Exception('两次密码输入不一致')
         user.set_password(data['password'])
         user.save()
         return Response({"message": 'OK'})
-
 
 
 

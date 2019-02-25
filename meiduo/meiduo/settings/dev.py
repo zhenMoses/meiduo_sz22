@@ -317,9 +317,16 @@ GENERATED_STATIC_HTML_FILES_DIR = os.path.join(os.path.dirname(os.path.dirname(B
 # 定时任务
 CRONJOBS = [
     # 每5分钟执行一次生成主页静态文件
-    # ('*/1 * * * *', 'contents.crons.generate_static_index_html', '>> /Users/nikusunoki/Desktop/python_try/python_senior/happystore/meido_mall/logs/crontab.log')
+    ('*/1 * * * *', 'contents.crons.generate_static_index_html', '>> /Users/nikusunoki/Desktop/meiduo/meiduo_sz22/meiduo/logs/crontab.log')
 ]
 
 # 解决crontab中文问题
 CRONTAB_COMMAND_PREFIX = 'LANG_ALL=zh_cn.UTF-8'
+
+
+
+# 微博登录参数配置
+WEIBO_CLIENT_ID = '3305669385'
+WEIBO_CLIENT_SECRET = '74c7bea69d5fc64f5c3b80c802325276'
+WEIBO_REDIRECT_URI = 'http://www.meiduo.site:8080/sina_callback.html'
 
