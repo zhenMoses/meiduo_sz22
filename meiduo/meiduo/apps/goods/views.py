@@ -1,14 +1,15 @@
 from django.shortcuts import render
 
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, GenericAPIView
 from rest_framework.filters import OrderingFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from meiduo_mall.utils.paginations import StandardResultsSetPagination
-from orders.models import OrderInfo
+from orders.models import OrderInfo, OrderGoods
+
 from .models import SKU
-from .serializers import SKUSerializer, SKUIndexSerializer, OrderDefaultSerialzier
+from .serializers import SKUSerializer, SKUIndexSerializer, OrderDefaultSerialzier, OrderGoodSerializer
 
 from drf_haystack.viewsets import HaystackViewSet
 

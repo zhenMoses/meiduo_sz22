@@ -1,14 +1,9 @@
 from rest_framework import serializers
 from drf_haystack.serializers import HaystackSerializer
 
-
 from goods.models import SKU
 from orders.models import OrderInfo, OrderGoods
 from .search_indexes import SKUIndex
-
-
-
-
 
 
 class SKUSerializer(serializers.ModelSerializer):
@@ -17,8 +12,6 @@ class SKUSerializer(serializers.ModelSerializer):
     class Meta:
         model = SKU
         fields = ['id', 'name', 'price', 'default_image_url', 'comments']
-
-
 
 
 # class SKUSerializer(serializers.ModelSerializer):
@@ -40,21 +33,21 @@ class SKUIndexSerializer(HaystackSerializer):
         fields = ('text', 'object')
 
 
-
 class OrderGoodSerializer(serializers.ModelSerializer):
+    sku = SKUSerializer()
 
-    sku=SKUSerializer()
     class Meta:
         model = OrderGoods
-        fields =['count','sku','price']
+        fields = ['count', 'sku', 'price']
 
 
 class OrderDefaultSerialzier(serializers.ModelSerializer):
     """"""
-    skus=OrderGoodSerializer(many=True)
+    skus = OrderGoodSerializer(many=True)
+
     class Meta:
-        model=OrderInfo
-        fields=['create_time','order_id','total_amount','freight','pay_method','status','skus']
-        # extra_kwargs={
-        #     'create_time': {'time':'%Y%m%d%H%M%S'},
-        # }
+        model = OrderInfo
+        fields = ['create_time', 'order_id', 'total_amount', 'freight', 'pay_method', 'status', 'skus']
+        extra_kwargs = {
+            'create_time': {'format': '%Y-%m-%-d %H:%M:%S'},
+        }

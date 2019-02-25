@@ -9,6 +9,7 @@ urlpatterns = [
     url(r'^categories/(?P<category_id>\d+)/skus/$', views.SKUListView.as_view()),
     #订单列表
     url(r'^order/$',views.OrderDefaultView.as_view()),
+
 ]
 
 

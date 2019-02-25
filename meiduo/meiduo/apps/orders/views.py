@@ -2,7 +2,7 @@ from _decimal import Decimal
 
 from django.shortcuts import render
 from rest_framework import status
-from rest_framework.generics import CreateAPIView, ListAPIView
+from rest_framework.generics import CreateAPIView, GenericAPIView,UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,9 +10,10 @@ from rest_framework.views import APIView
 from django_redis import get_redis_connection
 
 from goods.models import SKU
-from meiduo_mall.utils.paginations import StandardResultsSetPagination
+from goods.serializers import OrderGoodSerializer
+
 from orders.models import OrderInfo, OrderGoods
-from orders.serializers import OrderSettlementSerializer, SaveOrderSerializer, UnCommenOrdertSerialzier
+from orders.serializers import OrderSettlementSerializer, SaveOrderSerializer, CommentSerialzier
 
 
 class OrderSettlementView(APIView):
@@ -62,37 +63,36 @@ class SaveOrderView(CreateAPIView):
     serializer_class = SaveOrderSerializer
 
 
-#
-# class UnCommenOrdertView(APIView):
-#     permission_classes = [IsAuthenticated]
-#
-#     def get(self,request,order_id):
-#         user = request.data.get('user')
-#         # status=OrderInfo.ORDER_STATUS_CHOICES['UNCOMMENT']
-#         serializer=OrderInfo.objects.filter(order_id=order_id,user=user).all()
-#         serializer=UnCommenOrdertSerialzier(serializer,many=True)
-#         return Response(serializer.data)
 
+class UnCommentOrderView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = OrderGoodSerializer
 
-        #
-        # try:
-        #     orders =OrderInfo.objects.filter(order_id=order_id,user=user,status=status).all()
-        # except OrderInfo.DoesExist:
-        #     return Response({'message':'数据库查询失败'},status=status.HTTP_400_BAD_REQUEST)
-        #
+    def get(self,request,order_id):
 
-
-        # user=request.user
-        #
-        # queryset =OrderInfo.objects.filter(order_id=order_id,user=user).all()
-        # return queryset
-        # skus_list=[]
-        # for sku in orders:
-        #     skus_list[sku] =
-        # # for sku in orders.sku_id:
-        # #     sku = SKU.objects.get(sku=sku)
-        # #     skus_list.append(sku)
+        order=OrderGoods.objects.filter(order_id=order_id).order_by('create_time')
+        serializer=self.get_serializer(order,many=True)
+        return Response(serializer.data)
 
 
 
 
+class CommentOrderView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    # def put(self,request,order_id):
+    #     sku=request.data.get('sku_id')
+    #     try:
+    #
+    #         OrderGoods.objects.get(order_id=order_id,sku_id=sku).update(score=request.data.get('score'),is_commented=True,is_anonymous=request.data.get('is_anonymous'))
+    #     except OrderGoods.DoesExist:
+    #         return Response({'message':'订单商品不存在'})
+    #
+    #     serializer = CommentSerialzier(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #
+    #     serializer=CommentSerialzier(sku,many=True)
+    #     return Response(serializer.data)
+
+    pass

@@ -7,6 +7,8 @@ from django_redis import get_redis_connection
 from django.db import transaction
 
 from goods.models import SKU
+from oauth.utils import check_save_user_token
+from users.models import User
 from .models import OrderInfo, OrderGoods
 
 class SaveOrderSerializer(serializers.ModelSerializer):
@@ -177,19 +179,54 @@ class OrderSettlementSerializer(serializers.Serializer):
     skus = CartSKUSerializer(many=True)
 
 
-class UnCommenGoodsSerializer(serializers.ModelSerializer):
+
+
+class CommentSerialzier(serializers.ModelSerializer):
     class Meta:
-        model = SKU
-        fields = ('id', 'default_image_url', 'price')
+        model=OrderGoods
+        fields = ['comment','score','is_anonymous','is_commented']
+        extra_kwargs={
+            'comment':{
+                'min_length': 5,
+                'required': True,
+                'error_messages': {
+                    'min_length': '仅允许5-20个字符的用户名',
 
+                }
+            },
+        }
 
-class UnCommenOrdertSerialzier(serializers.ModelSerializer):
-    """订单评论"""
-    skus=UnCommenGoodsSerializer(many=True)
+class CheckPasswordSerializer(serializers.ModelSerializer):
+    """重置密码序列化器"""
+    password2 = serializers.CharField(label="确认密码", write_only=True)
+    access_token = serializers.CharField(label='操作凭证', write_only=True)
+
     class Meta:
-        model = OrderGoods
-        fields = ['skus','score','comment','is_anonymous','is_commented']
+        model = User  # 指定序列化器映射的模块
+        fields = ["id", "password", "password2", "access_token"]  # 指明为模型类的哪些字段生成
+
+    def validate(self, attrs):
+        #  校验密码
+        if attrs.get("password") != attrs.get("password2"):
+            raise serializers.ValidationError("两次密码不一致")
+        # 获取用户对象模型
+        user = self.context["user"]
+        # 检验token是否正确
+
+        access_token = attrs.get("access_token")
+        mobile = check_save_user_token(access_token)
+        # 判断用户的手机与当前手机是否相等
+        if mobile != user.mobile:
+            raise serializers.ValidationError({"message":"用户与绑定的手机不一致"})
 
 
+        return attrs
+
+    def update(self, instance, validated_data):
+        # 调用django的认证系统加密密码
+        instance.set_password(validated_data['password'])
+        instance.save()
+
+        return instance
 
 

@@ -34,16 +34,25 @@ urlpatterns=[
 
     # 以下5个路由是忘记密码功能的
     #生成图片验证码
-    url(r'^image_codes/(?P<image_code_id>[\w-]+)/$',views.ImageCodeView.as_view()),
+    # url(r'^image_codes/(?P<image_code_id>[\w-]+)/$',views.ImageCodeView.as_view()),
+    #
+    # # 判断用户是否存在(如果存在,可以修改,否则去注册)
+    # url(r'^accounts/(?P<username>.*)/sms/token/$', views.ImageCheckView.as_view()),
+    # #手机号发送短信验证码
+    # url(r'^sms_codes/$', views.FindPWSMSView.as_view()),
+    # # 验证短信验证路由
+    # url(r'accounts/(?P<mobile>.*)/password/token/$',views.SMSCheckView.as_view()),
+    #
+    # url(r'user/(?P<pk>\d+)/password/$',views.FindResetPWView.as_view())
+    # 获取图片验证码   3bbc8cbf-7d45-4525-b926-854f3b7a42f9
+    url(r'^image_codes/(?P<image_code_id>.*)/$', views.SendImageAPIView.as_view()),
+    # 校验图片验证码   /accounts/' + this.username + '/sms/token/
+    url(r'^accounts/(?P<username>\w{5,20})/sms/token/$', views.CheckImageAPIView.as_view()),
 
-    # 判断用户是否存在(如果存在,可以修改,否则去注册)
-    url(r'^accounts/(?P<username>.*)/sms/token/$', views.ImageCheckView.as_view()),
-    #手机号发送短信验证码
-    url(r'^sms_codes/$', views.FindPWSMSView.as_view()),
-    # 验证短信验证路由
-    url(r'accounts/(?P<mobile>.*)/password/token/$',views.SMSCheckView.as_view()),
-
-    url(r'user/(?P<pk>\d+)/password/$',views.FindResetPWView.as_view())
+    # 校验短信验证码   /accounts/' + this.username + '/password/token/
+    url(r'^accounts/(?P<mobile>1[3-9]\d{9})/password/token/$', views.CheckSMSCodeAPIView.as_view()),
+    # 重置密码 /users/1/password/
+    url(r'^user/(?P<pk>\d+)/password/$', views.CheckPasswordAPIView.as_view()),
 
 ]
 
