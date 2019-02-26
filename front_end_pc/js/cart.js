@@ -42,7 +42,7 @@ var vm = new Vue({
     },
     mounted: function(){
         // 获取购物车数据
-        axios.get(this.host+'/carts/', {
+        axios.get(this.host+'/cart/', {
                 headers: {
                     'Authorization': 'JWT ' + this.token
                 },

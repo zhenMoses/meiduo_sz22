@@ -90,7 +90,7 @@ class GoodsComment(GenericAPIView):
         try:
             request.user.orderinfo_set.get(order_id=order_id)
         except Exception:
-            return redirect('/index.html')
+            raise
         # 开启一个事务
         with transaction.atomic():
 
