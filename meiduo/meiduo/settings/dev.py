@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'xadmin',
     'crispy_forms',
     'reversion',
+    'haystack',
 
     'goods.apps.GoodsConfig',
     'users.apps.UsersConfig',
@@ -102,7 +103,15 @@ DATABASES = {
         'USER': 'meiduo',  # 数据库用户名
         'PASSWORD': 'meiduo',  # 数据库用户密码
         'NAME': 'meiduo_mall'  # 数据库名字
-    }
+    },
+    'slave': {
+            'ENGINE': 'django.db.backends.mysql',
+            'HOST': '192.168.133.222',
+            'PORT': 8306,
+            'USER': 'root',
+            'PASSWORD': 'mysql',
+            'NAME': 'meiduo_mall'
+        }
 }
 
 
@@ -317,7 +326,7 @@ GENERATED_STATIC_HTML_FILES_DIR = os.path.join(os.path.dirname(os.path.dirname(B
 # 定时任务
 CRONJOBS = [
     # 每5分钟执行一次生成主页静态文件
-    ('*/1 * * * *', 'contents.crons.generate_static_index_html', '>> /Users/nikusunoki/Desktop/meiduo/meiduo_sz22/meiduo/logs/crontab.log')
+    ('*/1 * * * *', 'contents.crons.generate_static_index_html', '>> /Users/nikusunoki/Desktop/python_try/meiduo/meiduo_sz22/meiduo/logs/crontab.log')
 ]
 
 # 解决crontab中文问题
@@ -330,3 +339,21 @@ WEIBO_CLIENT_ID = '3305669385'
 WEIBO_CLIENT_SECRET = '74c7bea69d5fc64f5c3b80c802325276'
 WEIBO_REDIRECT_URI = 'http://www.meiduo.site:8080/sina_callback.html'
 
+
+# Haystack
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'URL': 'http://192.168.133.222:9200/',  # 此处为elasticsearch运行的服务器ip地址，端口号固定为9200
+        'INDEX_NAME': 'meiduo',  # 指定elasticsearch建立的索引库的名称
+    },
+}
+
+# 当添加、修改、删除数据时，自动生成索引
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
+
+# 配置读写分离
+DATABASE_ROUTERS = ['meiduo_mall.utils.db_router.MasterSlaveDBRouter']
+
+
+STATIC_ROOT = os.path.join(os.path.dirname(os.path.dirname(BASE_DIR)), 'front_end_pc/static')

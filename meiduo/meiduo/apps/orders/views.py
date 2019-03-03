@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.http import Http404
 from django.shortcuts import render, redirect
 from rest_framework import serializers, status
 from rest_framework.filters import OrderingFilter
@@ -90,7 +91,7 @@ class GoodsComment(GenericAPIView):
         try:
             request.user.orderinfo_set.get(order_id=order_id)
         except Exception:
-            raise
+            raise Http404
         # 开启一个事务
         with transaction.atomic():
 
